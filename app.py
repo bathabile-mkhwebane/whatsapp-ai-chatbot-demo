@@ -1,45 +1,47 @@
-import os
 from flask import Flask, request, jsonify
 from twilio.twiml.messaging_response import MessagingResponse
-from textblob import TextBlob
 
 app = Flask(__name__)
 
-@app.route("/")
-def hello():
-    return "Hello, this is your WhatsApp AI Chatbot!"
-
 @app.route("/webhook", methods=["POST"])
 def webhook():
-    """This endpoint will be called by Twilio when a message is sent to your WhatsApp number."""
+    # Get the incoming message text from the user
+    incoming_msg = request.values.get('Body', '').lower()
+    response = MessagingResponse()
+    msg = response.message()
+
+    # Greeting message and categories
+    if "hi" in incoming_msg or "hello" in incoming_msg:
+        msg.body("Hi! Welcome to the Abacus Claiming Portal. How may I assist you today?\n\n"
+                 "1. Submit a claim\n"
+                 "2. Check claim status\n"
+                 "3. Speak to an agent\n"
+                 "4. Exit")
     
-    # Get the incoming message from Twilio
-    incoming_msg = request.form.get('Body', '').lower()
-    resp = MessagingResponse()
-    msg = resp.message()
-
-    # Use TextBlob for a simple analysis or response
-    if 'hello' in incoming_msg:
-        msg.body("Hello! How can I assist you today?")
-    elif 'help' in incoming_msg:
-        msg.body("Here are some things you can ask me: 'hello', 'help', 'how are you?'")
+    elif "1" in incoming_msg:
+        msg.body("You chose to submit a claim. Please provide your claim details and any supporting documents.")
+        # You can ask for further details here or integrate file upload functionality if needed.
+    
+    elif "2" in incoming_msg:
+        msg.body("You chose to check claim status. Please provide your claim number, and I'll check the status for you.")
+    
+    elif "3" in incoming_msg:
+        msg.body("You chose to speak to an agent. One of our agents will reach out to you shortly.")
+        # Optionally, you can integrate an actual agent feature here or notify a human agent.
+    
+    elif "4" in incoming_msg:
+        msg.body("You chose to exit. Thank you for using the Abacus Claiming Portal. Have a great day!")
+    
     else:
-        # Analyze the sentiment of the message
-        blob = TextBlob(incoming_msg)
-        sentiment = blob.sentiment.polarity
+        msg.body("Sorry, I didn't understand that. Please choose from the following options:\n\n"
+                 "1. Submit a claim\n"
+                 "2. Check claim status\n"
+                 "3. Speak to an agent\n"
+                 "4. Exit")
 
-        if sentiment > 0:
-            msg.body("I'm glad you're feeling positive!")
-        elif sentiment < 0:
-            msg.body("I'm sorry to hear you're feeling down. How can I help?")
-        else:
-            msg.body("I'm here to assist you with anything you need!")
-
-    return str(resp)
+    return str(response)
 
 if __name__ == "__main__":
-    # Get the port from the environment variable or default to 5000
-    port = int(os.environ.get('PORT', 5000))
-    # Run the Flask app on all IPs (0.0.0.0) so that it is accessible externally
-    app.run(host='0.0.0.0', port=port)
+    app.run(debug=True)
+
 
