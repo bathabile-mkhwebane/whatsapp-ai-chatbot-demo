@@ -1,27 +1,45 @@
-from flask import Flask, request
+import os
+from flask import Flask, request, jsonify
 from twilio.twiml.messaging_response import MessagingResponse
 from textblob import TextBlob
 
 app = Flask(__name__)
 
+@app.route("/")
+def hello():
+    return "Hello, this is your WhatsApp AI Chatbot!"
+
 @app.route("/webhook", methods=["POST"])
 def webhook():
-    """Respond to incoming messages with a simple AI reply."""
-    msg = request.form.get("Body")
+    """This endpoint will be called by Twilio when a message is sent to your WhatsApp number."""
+    
+    # Get the incoming message from Twilio
+    incoming_msg = request.form.get('Body', '').lower()
     resp = MessagingResponse()
+    msg = resp.message()
 
-    # Analyze the incoming message with TextBlob
-    blob = TextBlob(msg)
-    sentiment = blob.sentiment.polarity
-
-    if sentiment > 0:
-        resp.message("Thanks for your positive message! 😊")
-    elif sentiment < 0:
-        resp.message("Sorry you're feeling down. Let us know how we can help. 😔")
+    # Use TextBlob for a simple analysis or response
+    if 'hello' in incoming_msg:
+        msg.body("Hello! How can I assist you today?")
+    elif 'help' in incoming_msg:
+        msg.body("Here are some things you can ask me: 'hello', 'help', 'how are you?'")
     else:
-        resp.message("Thanks for reaching out! How can we assist you? 🤖")
+        # Analyze the sentiment of the message
+        blob = TextBlob(incoming_msg)
+        sentiment = blob.sentiment.polarity
+
+        if sentiment > 0:
+            msg.body("I'm glad you're feeling positive!")
+        elif sentiment < 0:
+            msg.body("I'm sorry to hear you're feeling down. How can I help?")
+        else:
+            msg.body("I'm here to assist you with anything you need!")
 
     return str(resp)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    # Get the port from the environment variable or default to 5000
+    port = int(os.environ.get('PORT', 5000))
+    # Run the Flask app on all IPs (0.0.0.0) so that it is accessible externally
+    app.run(host='0.0.0.0', port=port)
+
